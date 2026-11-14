@@ -1,5 +1,5 @@
 import { UserRound } from "lucide-react";
-import { Form } from "react-router";
+import { Form, Link } from "react-router";
 import { LogoutButton } from "~/components/LogoutButton";
 import { Button } from "~/components/ui/button";
 import {
@@ -23,10 +23,13 @@ export function Header() {
 					</DropdownMenuTrigger>
 
 					<DropdownMenuContent align="end" sideOffset={8}>
-						<DropdownMenuItem>My Profile</DropdownMenuItem>
+						<Link to="my-profile">
+							<DropdownMenuItem>My Profile</DropdownMenuItem>
+						</Link>
+						<Link to="lessons">
 
 						<DropdownMenuItem>My Lessons</DropdownMenuItem>
-
+</Link>
 						<DropdownMenuItem>
 							<LogoutButton />
 						</DropdownMenuItem>
