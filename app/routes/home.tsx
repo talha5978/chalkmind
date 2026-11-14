@@ -17,7 +17,7 @@ export function meta({}: Route.MetaArgs) {
 }
 
 const SAMPLE_PROMPTS = [
-	"Prove the Pythagorean theorem visually using squares",
+	"How do we balance AVL tree in data structures. Explain each case with good example",
 	"Explain how binary search works on a sorted array",
 	"Visualize derivatives as the slope of a tangent line",
 ];
@@ -27,8 +27,8 @@ export default function Home() {
 	const isSubmitting = navigation.state === "submitting";
 
 	return (
-		<main className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-6">
-			<div className="w-full max-w-2xl space-y-6">
+		<main className="min-h-[calc(100dvh-3.5rem)] bg-background text-foreground flex flex-col items-center justify-center p-6">
+			<div className="w-full max-w-5xl space-y-6">
 				<div className="flex items-center justify-between">
 					<div className="space-y-1">
 						<div>
