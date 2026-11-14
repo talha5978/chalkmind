@@ -30,15 +30,16 @@ export async function action({ request }: Route.ActionArgs) {
 					role: "user",
 					parts: [
 						{
-							text: `You are an expert educational scriptwriter and Manim (Python Community Edition v0.18+) animation developer.
-      Create EXACTLY 3 concise scenes for a blackboard explanation of the following topic: "${prompt}".
-      Rules for manim_code:
-      - Write ONLY statements that go inside \`def construct(self):\`.
-      - Indent every line with 8 spaces.
-      - Use chalk-style colors on a dark background (WHITE, YELLOW, BLUE_B, GREEN_B, RED_B).
-      - NEVER use Tex or MathTex. Use only standard Text("...").
-      - Keep animations short and simple.
-      Return valid JSON matching the schema.`,
+							text: `You are an expert educational scriptwriter and Manim (Python Community Edition) animation developer.
+Create between 5 and 8 detailed, sequential scenes for a blackboard explanation of the following topic: "${prompt}".
+Rules for manim_code:
+- Write ONLY statements that go inside \`def construct(self):\`.
+- Indent every line with 8 spaces.
+- Use chalk-style colors on a dark background (WHITE, YELLOW, BLUE_B, GREEN_B, RED_B).
+- NEVER use Tex or MathTex. Use only standard Text("...").
+- NEVER use self.mobjects indexing (such as self.mobjects[0] or self.mobjects[1:]). Always assign created Text, Shapes, and Groups to named variables (e.g., 'my_box = Square()') and reference those variables directly.
+- Ensure each scene has meaningful visual animations (e.g., creating shapes, writing text, transforming objects) so there is continuous visual engagement matching the narration.
+Return valid JSON matching the schema.`,
 						},
 					],
 				},
@@ -51,8 +52,8 @@ export async function action({ request }: Route.ActionArgs) {
 						title: { type: Type.STRING },
 						scenes: {
 							type: Type.ARRAY,
-							minItems: 1,
-							maxItems: 3, // <--- Strictly limit to 3 scenes max
+							minItems: 5,
+							maxItems: 8, // <--- Increased from 3 to 8 scenes for smooth, continuous coverage
 							items: {
 								type: Type.OBJECT,
 								properties: {

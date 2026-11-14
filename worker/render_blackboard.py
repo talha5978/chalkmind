@@ -69,6 +69,8 @@ The following Manim code failed to render and threw an error. Fix the code so it
 CRITICAL RULES:
 - Use 3D coordinates like ORIGIN + UP * 2.5 to avoid shape broadcasting errors.
 - Never use Tex or MathTex. Use only standard Text("...").
+- NEVER index into self.mobjects (e.g., self.mobjects[0]). Always assign your shapes and text to explicit local variables and animate those variables directly.
+- NEVER pass multiple separate objects into FadeOut like FadeOut(a, b, c). Wrap them in a VGroup or fade them out individually.
 - Keep it inside def construct(self): indented correctly.
 
 BROKEN CODE:
@@ -122,6 +124,11 @@ def main():
         asyncio.run(generate_audio(scene["narration"], audio_path))
         duration = get_audio_duration(audio_path)
         audio_files.append((audio_path, duration))
+        scene["duration"] = duration
+
+    # Save durations back to lesson.json
+    with open(json_path, "w") as f:
+        json.dump(data, f, indent=2)
 
     update_status(
         output_dir, "generating", 60, "Assembling Manim blackboard animation script..."
@@ -136,8 +143,20 @@ def main():
         for i, scene in enumerate(data["scenes"]):
             duration = audio_files[i][1]
             code = scene["manim_code"]
-            if attempt > 0:
-                code = heal_code_with_gemini(code, scene.get("last_error", ""))
+
+            # If retrying and an error was recorded, heal it and PERSIST the fix!
+            if attempt > 0 and scene.get("last_error"):
+                print(f"Healing scene {i+1} with Gemini (Attempt {attempt+1})...")
+                code = heal_code_with_gemini(code, scene["last_error"])
+                scene["manim_code"] = (
+                    code  # Persist healed code for subsequent attempts
+                )
+
+            # Sanitize common AI mistakes
+            code = code.replace(
+                "FadeOut(self.mobjects)", "FadeOut(Group(*self.mobjects))"
+            )
+            code = code.replace("FadeOut(mobjects)", "FadeOut(Group(*self.mobjects))")
 
             formatted_code = smart_indent(code, target_spaces=8)
             scene_block = f"""
@@ -154,7 +173,6 @@ def main():
         manim_code = f"""
 from manim import *
 
-# Explicitly disable preview to prevent server hangs
 config.preview = False
 
 class BlackboardLesson(Scene):
@@ -194,17 +212,28 @@ class BlackboardLesson(Scene):
             break
         except subprocess.TimeoutExpired:
             err = "Manim rendering timed out after 120 seconds."
-            data["scenes"][0]["last_error"] = err
+            for scene in data["scenes"]:
+                scene["last_error"] = err
             if attempt == max_retries:
                 update_status(output_dir, "failed", 100, err)
                 sys.exit(1)
         except subprocess.CalledProcessError as e:
-            # Read the debug log to see why it failed
             with open(log_path, "r") as log_file:
-                err_content = log_file.read()[-400:]
-            data["scenes"][0]["last_error"] = err_content or "Manim exited with an error."
+                err_content = log_file.read()
+
+            error_msg = (
+                err_content[-600:] if err_content else "Manim exited with an error."
+            )
+            print(f"\n[Attempt {attempt+1} Failed]:\n{error_msg}\n")
+
+            # Attach error to all scenes so healing targets them
+            for scene in data["scenes"]:
+                scene["last_error"] = error_msg
+
             if attempt == max_retries:
-                update_status(output_dir, "failed", 100, f"Manim render error")
+                update_status(
+                    output_dir, "failed", 100, "Manim render error after retries."
+                )
                 sys.exit(1)
 
     if not success:
