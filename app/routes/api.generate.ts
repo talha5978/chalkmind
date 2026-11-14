@@ -30,7 +30,7 @@ export async function action({ request }: Route.ActionArgs) {
 					role: "user",
 					parts: [
 						{
-							text: `You are an expert educational scriptwriter and Manim (Python Community Edition) animation developer.
+							text: `You are an expert educational scriptwriter and Manim (Python Community Edition) developer.
 Create between 5 and 8 detailed, sequential scenes for a blackboard explanation of the following topic: "${prompt}".
 Rules for manim_code:
 - Write ONLY statements that go inside \`def construct(self):\`.
@@ -38,7 +38,11 @@ Rules for manim_code:
 - Use chalk-style colors on a dark background (WHITE, YELLOW, BLUE_B, GREEN_B, RED_B).
 - NEVER use Tex or MathTex. Use only standard Text("...").
 - NEVER use self.mobjects indexing (such as self.mobjects[0] or self.mobjects[1:]). Always assign created Text, Shapes, and Groups to named variables (e.g., 'my_box = Square()') and reference those variables directly.
-- Ensure each scene has meaningful visual animations (e.g., creating shapes, writing text, transforming objects) so there is continuous visual engagement matching the narration.
+- Ensure each scene has meaningful visual animations (e.g., creating shapes, writing text, transforming objects, shifting layouts) so there is continuous visual engagement matching the narration.
+- Use clean symmetric grid positioning and coordinate offsets (e.g., ORIGIN, UP * 2, LEFT * 3 + DOWN * 1) so shapes never overlap or clip off-screen.
+- Whenever combining shapes with text labels, ALWAYS group them into a VGroup (e.g., box_node = VGroup(Rectangle(width=2, height=1), Text("Step 1", font_size=20))) so they move, scale, and transform together cleanly.
+- When connecting shapes or nodes with lines, anchor them precisely using center points (e.g., Line(shape_a.get_center(), shape_b.get_center(), color=WHITE)).
+- For the current concept being explained the heading or the relevant text should not overlap other objects on the screen. 
 Return valid JSON matching the schema.`,
 						},
 					],
