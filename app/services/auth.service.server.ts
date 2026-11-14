@@ -2,11 +2,7 @@ import { BaseService } from "~/services/base.server.service";
 import { ApiError } from "~/utils/errors/ApiError";
 import type { User, Session } from "@supabase/supabase-js";
 import { clearCachedProfile, getCachedProfile, setCachedProfile } from "~/utils/auth-cache.server";
-
-type AuthResult<T> = {
-	data: T | null;
-	error: ApiError | null;
-};
+import type { ServiceResult } from "~/types/service-result";
 
 export class AuthService extends BaseService {
 	/**
@@ -14,7 +10,7 @@ export class AuthService extends BaseService {
 	 */
 	async exchangeCodeForSession(
 		code: string,
-	): Promise<AuthResult<{ user: User | null; session: Session | null }>> {
+	): Promise<ServiceResult<{ user: User | null; session: Session | null }>> {
 		try {
 			const { data, error } = await this.supabase.auth.exchangeCodeForSession(code);
 			return {
@@ -47,7 +43,7 @@ export class AuthService extends BaseService {
 				[key: string]: any;
 			};
 		};
-	}): Promise<AuthResult<{ user: User | null; session: Session | null }>> {
+	}): Promise<ServiceResult<{ user: User | null; session: Session | null }>> {
 		try {
 			const { data, error } = await this.supabase.auth.signUp({
 				email,
@@ -77,7 +73,7 @@ export class AuthService extends BaseService {
 	/**
 	 * Initiate Google OAuth sign-in flow
 	 */
-	async signInWithGoogle(redirectToUrl: string): Promise<AuthResult<{ url: string }>> {
+	async signInWithGoogle(redirectToUrl: string): Promise<ServiceResult<{ url: string }>> {
 		try {
 			const { data, error } = await this.supabase.auth.signInWithOAuth({
 				provider: "google",
@@ -114,7 +110,7 @@ export class AuthService extends BaseService {
 	}: {
 		email: string;
 		password: string;
-	}): Promise<AuthResult<{ user: User; session: Session }>> {
+	}): Promise<ServiceResult<{ user: User; session: Session }>> {
 		try {
 			const { data, error } = await this.supabase.auth.signInWithPassword({
 				email,
@@ -150,7 +146,7 @@ export class AuthService extends BaseService {
 	/**
 	 * Get the currently authenticated user (or null)
 	 */
-	async getUser(): Promise<AuthResult<User>> {
+	async getUser(): Promise<ServiceResult<User>> {
 		try {
 			const {
 				data: { user },
@@ -189,7 +185,7 @@ export class AuthService extends BaseService {
 	/**
 	 * Sign the user out
 	 */
-	async signOut(): Promise<AuthResult<boolean>> {
+	async signOut(): Promise<ServiceResult<boolean>> {
 		try {
 			const cookieHeader = this.request.headers.get("cookie");
 			clearCachedProfile(cookieHeader);

@@ -39,7 +39,7 @@ export default function GeneratingProgress() {
 	}, [id, navigate]);
 
 	return (
-		<main className="min-h-screen bg-background text-foreground flex items-center justify-center p-6">
+		<main className="min-h-[calc(100dvh-3.5rem)] bg-background text-foreground flex items-center justify-center p-6">
 			<Card className="w-full max-w-md border-border bg-card text-card-foreground shadow-lg">
 				<CardHeader className="text-center space-y-2">
 					<div className="flex justify-center mb-1">

@@ -8,3 +8,6 @@
 
 .venv/
 public/outputs
+
+tmp
+worker_debug.log

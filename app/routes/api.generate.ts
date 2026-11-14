@@ -1,9 +1,11 @@
+import fs from "fs";
 import { redirect } from "react-router";
 import type { Route } from "./+types/api.generate";
 import { GoogleGenAI, Type } from "@google/genai";
 import { spawn } from "child_process";
-import fs from "fs/promises";
 import path from "path";
+import { AuthService } from "~/services/auth.service.server";
+import { LessonsService } from "~/services/lessons.service.server";
 
 const ai = new GoogleGenAI({
 	apiKey: process.env.GEMINI_API_KEY,
@@ -11,6 +13,9 @@ const ai = new GoogleGenAI({
 });
 
 export async function action({ request }: Route.ActionArgs) {
+	const auth = new AuthService(request);
+	const user = await auth.requireUser();
+
 	const formData = await request.formData();
 	const prompt = formData.get("prompt");
 
@@ -19,8 +24,7 @@ export async function action({ request }: Route.ActionArgs) {
 	}
 
 	const lessonId = Math.random().toString(36).substring(2, 9);
-	const outputDir = path.join(process.cwd(), "public", "outputs", lessonId);
-	await fs.mkdir(outputDir, { recursive: true });
+	const lessonsService = new LessonsService(request);
 
 	try {
 		const response = await ai.models.generateContent({
@@ -30,19 +34,17 @@ export async function action({ request }: Route.ActionArgs) {
 					role: "user",
 					parts: [
 						{
-							text: `You are an expert educational scriptwriter and Manim (Python Community Edition) developer.
+							text: `You are an expert educational scriptwriter and Manim (Python Community Edition) animation developer.
 Create between 5 and 8 detailed, sequential scenes for a blackboard explanation of the following topic: "${prompt}".
-Rules for manim_code:
-- Write ONLY statements that go inside \`def construct(self):\`.
-- Indent every line with 8 spaces.
-- Use chalk-style colors on a dark background (WHITE, YELLOW, BLUE_B, GREEN_B, RED_B).
-- NEVER use Tex or MathTex. Use only standard Text("...").
-- NEVER use self.mobjects indexing (such as self.mobjects[0] or self.mobjects[1:]). Always assign created Text, Shapes, and Groups to named variables (e.g., 'my_box = Square()') and reference those variables directly.
-- Ensure each scene has meaningful visual animations (e.g., creating shapes, writing text, transforming objects, shifting layouts) so there is continuous visual engagement matching the narration.
+
+CRITICAL UNIVERSAL VISUAL & LAYOUT RULES:
 - Use clean symmetric grid positioning and coordinate offsets (e.g., ORIGIN, UP * 2, LEFT * 3 + DOWN * 1) so shapes never overlap or clip off-screen.
 - Whenever combining shapes with text labels, ALWAYS group them into a VGroup (e.g., box_node = VGroup(Rectangle(width=2, height=1), Text("Step 1", font_size=20))) so they move, scale, and transform together cleanly.
 - When connecting shapes or nodes with lines, anchor them precisely using center points (e.g., Line(shape_a.get_center(), shape_b.get_center(), color=WHITE)).
-- For the current concept being explained the heading or the relevant text should not overlap other objects on the screen. 
+- NEVER use Tex or MathTex. Use only standard Text("...").
+- NEVER use self.mobjects indexing (such as self.mobjects[0]). Always assign created objects to named variables and animate those variables directly.
+- Ensure each scene has meaningful visual animations (e.g., creating shapes, writing text, transforming objects, shifting layouts) so there is continuous visual engagement matching the narration.
+
 Return valid JSON matching the schema.`,
 						},
 					],
@@ -57,7 +59,7 @@ Return valid JSON matching the schema.`,
 						scenes: {
 							type: Type.ARRAY,
 							minItems: 5,
-							maxItems: 8, // <--- Increased from 3 to 8 scenes for smooth, continuous coverage
+							maxItems: 8,
 							items: {
 								type: Type.OBJECT,
 								properties: {
@@ -75,23 +77,28 @@ Return valid JSON matching the schema.`,
 		});
 
 		const lessonData = JSON.parse(response.text || "{}");
-		await fs.writeFile(path.join(outputDir, "lesson.json"), JSON.stringify(lessonData, null, 2));
-		await fs.writeFile(
-			path.join(outputDir, "status.json"),
-			JSON.stringify({
-				status: "generating",
-				progress: 25,
-				message: "Script generated. Rendering Manim blackboard animation...",
-			}),
-		);
 
-		// 2. Spawn Python worker in the background
+		// Create lesson and normalized scenes using LessonsService
+		const { error: createError } = await lessonsService.createLesson({
+			id: lessonId,
+			userId: user.id,
+			title: lessonData.title || "Generated Blackboard Lesson",
+			prompt: prompt,
+			scenes: lessonData.scenes,
+		});
+
+		if (createError) {
+			throw new Error(createError.message);
+		}
+
+		const logStream = fs.openSync(path.join(process.cwd(), "worker_debug.log"), "w");
+
 		const worker = spawn(
 			"python3",
-			[path.join(process.cwd(), "worker", "render_blackboard.py"), outputDir],
+			[path.join(process.cwd(), "worker", "render_blackboard.py"), lessonId, user.id],
 			{
 				detached: true,
-				stdio: "ignore",
+				stdio: ["ignore", logStream, logStream],
 			},
 		);
 		worker.unref();

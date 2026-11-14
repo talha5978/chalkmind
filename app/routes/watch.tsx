@@ -5,9 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/com
 import { Badge } from "~/components/ui/badge";
 import { Separator } from "~/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import fs from "node:fs";
-import path from "node:path";
 import { VideoPlayer } from "~/components/VideoPlayer";
+import { LessonsService } from "~/services/lessons.service.server";
 
 export function meta({ loaderData }: Route.MetaArgs) {
 	return [
@@ -19,28 +18,26 @@ export function meta({ loaderData }: Route.MetaArgs) {
 	];
 }
 
-export async function loader({ params }: Route.LoaderArgs) {
+export async function loader({ request, params }: Route.LoaderArgs) {
 	if (!params.id) {
 		throw new Response("Missing id. Please try again", { status: 400 });
 	}
 
-	const outputDir = path.join(process.cwd(), "public", "outputs", params.id);
-	const lessonJsonPath = path.join(outputDir, "lesson.json");
+	const lessonsService = new LessonsService(request);
+	const { data, error } = await lessonsService.getLessonWithScenes(params.id);
 
-	if (!fs.existsSync(lessonJsonPath)) {
+	if (error || !data) {
 		throw new Response("Lesson not found or still generating", { status: 404 });
 	}
 
-	const lessonData = JSON.parse(fs.readFileSync(lessonJsonPath, "utf-8"));
+	const { lesson, scenes } = data;
 
-	// Calculate running timestamps based on audio file durations if available,
-	// or estimate ~8 seconds per scene
 	let accumulatedSeconds = 0;
 	const scenesWithTimestamps: {
 		step: number;
 		timestamp: string;
 		narration: string;
-	}[] = lessonData.scenes.map((scene: any, index: number) => {
+	}[] = scenes.map((scene: any, index: number) => {
 		const minutes = Math.floor(accumulatedSeconds / 60)
 			.toString()
 			.padStart(2, "0");
@@ -49,27 +46,21 @@ export async function loader({ params }: Route.LoaderArgs) {
 			.padStart(2, "0");
 		const timestamp = `${minutes}:${seconds}`;
 
-		// Try reading actual audio duration if generated
-		let sceneDuration = 8; // default fallback
-		try {
-			const audioPath = path.join(outputDir, `scene_${index}.mp3`);
-			sceneDuration = Math.ceil(fs.statSync(audioPath).size / 1024 / 1024);
-		} catch (e) {
-			// fallback
-		}
+		const sceneDuration = scene.duration || 8;
+		const currentTimestamp = timestamp;
 		accumulatedSeconds += sceneDuration;
 
 		return {
 			step: scene.step || index + 1,
-			timestamp,
+			timestamp: currentTimestamp,
 			narration: scene.narration,
 		};
 	});
 
 	return {
 		id: params.id,
-		title: lessonData.title || "Generated Blackboard Lesson",
-		videoUrl: `/outputs/${params.id}/final.mp4`,
+		title: lesson.title || "Generated Blackboard Lesson",
+		videoUrl: lesson.video_url,
 		scenes: scenesWithTimestamps,
 	};
 }
@@ -79,12 +70,12 @@ export default function WatchLesson() {
 
 	return (
 		<main className="min-h-screen bg-background text-foreground p-6">
-			<div className="mx-auto max-w-5xl space-y-6">
+			<div className="mx-auto max-w-4xl space-y-6">
 				<div className="flex flex-wrap items-center justify-between gap-4">
 					<div className="space-y-1">
 						<div className="flex items-center gap-2">
 							<Badge variant="secondary">Lesson #{id}</Badge>
-							<Badge variant="outline">Blackboard AI</Badge>
+							<Badge variant="outline">Cloud Blackboard AI</Badge>
 						</div>
 						<h1 className="text-2xl font-bold tracking-tight">{title}</h1>
 					</div>
@@ -94,10 +85,6 @@ export default function WatchLesson() {
 				</div>
 
 				<Card className="overflow-hidden border-border bg-card">
-					{/* <div className="aspect-video w-full bg-muted flex items-center justify-center border-b border-border">
-						<video controls playsInline className="h-full w-full object-contain" src={videoUrl} />
-					</div> */}
-
 					<div className="w-full bg-muted">
 						<VideoPlayer src={videoUrl} title={title} />
 					</div>
@@ -135,8 +122,8 @@ export default function WatchLesson() {
 										</CardDescription>
 									</CardHeader>
 									<CardContent className="text-sm leading-relaxed text-foreground">
-										This lesson was custom-generated using Gemini and Manim to provide an
-										intuitive, step-by-step vector animation of your prompt.
+										This lesson was custom-generated using Gemini and Manim, then securely
+										stored and served via Supabase Storage.
 									</CardContent>
 								</Card>
 							</TabsContent>
