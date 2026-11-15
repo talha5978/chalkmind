@@ -8,7 +8,7 @@ export default [
 		route("watch/:id", "./routes/watch.tsx"),
 		route("api/status/:id", "./routes/api.status.ts"),
 		route("generate/:id", "./routes/generate.tsx"),
-		route("lessons", "./routes/lessons.tsx")
+		route("lessons", "./routes/lessons.tsx"),
 	]),
 	route("login", "./routes/login.tsx"),
 	route("signup", "./routes/signup.tsx"),

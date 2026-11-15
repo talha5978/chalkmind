@@ -1,10 +1,13 @@
-import { Form, useNavigation } from "react-router";
+import { useFetcher } from "react-router";
+import { useEffect } from "react";
 import type { Route } from "./+types/home";
+
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "~/components/ui/card";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
 import { Badge } from "~/components/ui/badge";
+import { toast } from "sonner";
 
 export function meta({}: Route.MetaArgs) {
 	return [
@@ -23,17 +26,22 @@ const SAMPLE_PROMPTS = [
 ];
 
 export default function Home() {
-	const navigation = useNavigation();
-	const isSubmitting = navigation.state === "submitting";
+	const fetcher = useFetcher();
+
+	const isSubmitting = fetcher.state !== "idle";
+
+	useEffect(() => {
+		if (fetcher.state === "idle" && fetcher.data?.error) {
+			toast.error(fetcher.data.error);
+		}
+	}, [fetcher.state, fetcher.data]);
 
 	return (
 		<main className="min-h-[calc(100dvh-3.5rem)] bg-background text-foreground flex flex-col items-center justify-center p-6">
 			<div className="w-full max-w-5xl space-y-6">
 				<div className="flex items-center justify-between">
 					<div className="space-y-1">
-						<div>
-							<h1 className="text-2xl font-bold tracking-tight">ChalkMind</h1>
-						</div>
+						<h1 className="text-2xl font-bold tracking-tight">ChalkMind</h1>
 						<p className="text-sm text-muted-foreground">
 							Visual, step-by-step blackboard explanations with synchronized audio & captions.
 						</p>
@@ -49,7 +57,7 @@ export default function Home() {
 						</CardDescription>
 					</CardHeader>
 
-					<Form method="post" action="/api/generate">
+					<fetcher.Form method="post" action="/api/generate">
 						<CardContent className="space-y-4 mb-4">
 							<div className="space-y-2">
 								<Label htmlFor="prompt">Problem or Topic Statement</Label>
@@ -78,6 +86,7 @@ export default function Home() {
 												const textarea = document.getElementById(
 													"prompt",
 												) as HTMLTextAreaElement | null;
+
 												if (textarea) textarea.value = sample;
 											}}
 										>
@@ -93,7 +102,7 @@ export default function Home() {
 								{isSubmitting ? "Synthesizing Blackboard..." : "Generate Blackboard Lesson"}
 							</Button>
 						</CardFooter>
-					</Form>
+					</fetcher.Form>
 				</Card>
 			</div>
 		</main>

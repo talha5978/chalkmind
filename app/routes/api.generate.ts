@@ -104,8 +104,11 @@ Return valid JSON matching the schema.`,
 		worker.unref();
 
 		return redirect(`/generate/${lessonId}`);
-	} catch (error) {
-		console.error("\x1b[31mGeneration pipeline failed:\x1b[0m", error);
-		return Response.json({ error: "Failed to generate blackboard video." }, { status: 500 });
+	} catch (error: any) {
+		console.error("\x1b[31mGeneration pipeline failed:\x1b[0m", error?.message);
+		return Response.json(
+			{ error: error?.message?.error?.message ?? "Failed to generate blackboard video." },
+			{ status: 500 },
+		);
 	}
 }

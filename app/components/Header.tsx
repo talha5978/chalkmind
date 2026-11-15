@@ -27,9 +27,8 @@ export function Header() {
 							<DropdownMenuItem>My Profile</DropdownMenuItem>
 						</Link>
 						<Link to="lessons">
-
-						<DropdownMenuItem>My Lessons</DropdownMenuItem>
-</Link>
+							<DropdownMenuItem>My Lessons</DropdownMenuItem>
+						</Link>
 						<DropdownMenuItem>
 							<LogoutButton />
 						</DropdownMenuItem>
